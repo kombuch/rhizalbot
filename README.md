@@ -1,0 +1,2 @@
+# rhizalbot
+discord bot
