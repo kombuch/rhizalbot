@@ -43,7 +43,7 @@ async def send_lfm_auth(ctx):
     await ctx.author.dm_channel.send(f"http://www.last.fm/api/auth/?api_key={LASTFMAPIKEY}&token={bot.lastfmToken}")
 
 @bot.command(name='lfmgetsession', help="use once authed")
-async def lfm_get_sk(ctx):
+async def lfm_get_sessionkey(ctx):
     sessionJSON = fetch_lfm_session()
     bot.sk = json.loads(sessionJSON)["key"]
     bot.fmUser = json.loads(sessionJSON)["name"]
@@ -52,6 +52,7 @@ async def lfm_get_sk(ctx):
         bot.dbcur.execute(f"INSERT INTO sessions VALUES ('{bot.fmUser}', '{bot.sk}'")
         bot.dbcon.commit()
     except sqlite3.OperationalError:
+        print("SQLite Error")
         pass
 
 #tofix: gets last session key added to DB
@@ -64,14 +65,21 @@ def load_sk_from_db():
         pass
 
 
-@bot.command(name='song', help="tells you what's up")
-async def pick_song(ctx):
-    payload = {'method' : 'user.getWeeklyTrackChart', 'api_key' : LASTFMAPIKEY, 'user' : 'clearmode', 'format' : 'json', }
+@bot.command(name='wtracks', help="tells you what's up")
+async def pick_song(ctx, user):
+    payload = {'method' : 'user.getWeeklyTrackChart', 'api_key' : LASTFMAPIKEY, 'user' : user, 'format' : 'json', }
     result = requests.get('http://ws.audioscrobbler.com/2.0/', params = payload)
     resultJSON = json.loads(result.text)
+    await ctx.send(user + "'s weekly top 5:")
+    top = 5
     for song in resultJSON['weeklytrackchart']['track']:
+        if top == 0:
+            break
         artist = song['artist']['#text']
-        await ctx.send(artist)
+        track = song['name']
+        plays = song['playcount']
+        await ctx.send(track + " - " + artist + " : " + plays + " plays")
+        top -= 1
 
 def lastfm_sign(params):
     keys = params.keys().sort()
